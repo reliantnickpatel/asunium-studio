@@ -17,8 +17,8 @@ import {
   Check,
   Loader2,
   FileText,
-  ArrowLeft,
   FilePlus2,
+  Home,
 } from "lucide-react";
 
 import { ResizableImage } from "./ResizableImage";
@@ -26,12 +26,12 @@ import { PageBreak } from "./PageBreak";
 import EditorToolbar from "./EditorToolbar";
 import { exportHtmlToDocx } from "@/lib/editor/exportDocx";
 import { templates, TEMPLATE_LABELS, type TemplateKey } from "@/lib/editor/templates";
-import { saveDoc, getDoc, type StoredDoc } from "@/lib/persistence";
+import { getDoc, saveDoc, type StoredDoc } from "@/lib/persistence";
 
 type SaveState = "idle" | "saving" | "saved";
 
 export default function RichEditor() {
-  const [docId, setDocId] = useState<string>("");
+  const [docId, setDocId] = useState(() => nanoid(10));
   const [title, setTitle] = useState("Untitled document");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [exporting, setExporting] = useState(false);
@@ -60,20 +60,13 @@ export default function RichEditor() {
     ],
     content: templates.resume,
     editorProps: {
-      attributes: { class: "tiptap doc-page thin-scroll" },
+      attributes: { class: "tiptap doc-page-stack thin-scroll" },
     },
     onUpdate: ({ editor }) => {
       setWords(editor.getText().trim().split(/\s+/).filter(Boolean).length);
       scheduleSave();
     },
   });
-
-  // Initialize id + load last doc / restore
-  useEffect(() => {
-    const id = nanoid(10);
-    setDocId(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const doSave = useCallback(async () => {
     if (!editor || !docId) return;
@@ -103,6 +96,23 @@ export default function RichEditor() {
     scheduleSave();
   };
 
+  useEffect(() => {
+    if (!editor) return;
+    const recentId = new URLSearchParams(window.location.search).get("doc");
+    if (!recentId) return;
+    let cancelled = false;
+    void getDoc(recentId).then((saved) => {
+      if (cancelled || !saved || saved.kind !== "editor") return;
+      setDocId(saved.id);
+      setTitle(saved.title || "Untitled document");
+      editor.commands.setContent(saved.data, { emitUpdate: false });
+      setWords(editor.getText().trim().split(/\s+/).filter(Boolean).length);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editor]);
+
   const onExport = async () => {
     if (!editor) return;
     setExporting(true);
@@ -122,31 +132,32 @@ export default function RichEditor() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {/* Top bar (sticky) */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
-        <Link href="/" className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800">
-          <ArrowLeft size={16} /> Home
+    <div className="flex h-screen flex-col overflow-hidden bg-[#dfe3e7]">
+      <div className="studio-appbar flex h-14 shrink-0 items-center gap-2 border-b border-white/10 bg-[#171a20] px-3 text-slate-300 sm:gap-3 sm:px-4">
+        <Link href="/" title="Workspace" aria-label="Workspace" className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/10 hover:text-white">
+          <Home size={17} />
         </Link>
-        <div className="flex items-center gap-2">
-          <FileText size={18} className="text-blue-600" />
+        <span className="h-6 w-px bg-white/10" />
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#3867d6] text-white"><FileText size={17} /></span>
           <input
             value={title}
             onChange={(e) => {
               setTitle(e.target.value);
               scheduleSave();
             }}
-            className="w-56 rounded-md border border-transparent px-2 py-1 text-sm font-medium hover:border-slate-200 focus:border-blue-400 focus:outline-none"
+            aria-label="Document title"
+            className="min-w-0 max-w-52 bg-transparent px-1 py-1 text-sm font-medium text-white outline-none placeholder:text-slate-500 hover:bg-white/5 focus:bg-white/10 sm:w-56"
           />
         </div>
 
-        {/* Template selector */}
-        <div className="flex items-center gap-1.5 text-sm">
-          <FilePlus2 size={15} className="text-slate-400" />
+        <div className="hidden items-center gap-1.5 text-sm sm:flex">
+          <FilePlus2 size={15} className="text-slate-500" />
           <select
             onChange={(e) => loadTemplate(e.target.value as TemplateKey)}
             defaultValue=""
-            className="rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-600 focus:outline-none"
+            aria-label="Document template"
+            className="h-9 rounded-md border border-white/10 bg-white/5 px-2 text-sm text-slate-300 outline-none hover:bg-white/10 focus:border-[#5c80dc]"
           >
             <option value="" disabled>
               Template…
@@ -159,43 +170,44 @@ export default function RichEditor() {
           </select>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <span className="hidden items-center gap-1.5 text-xs text-slate-500 sm:flex">
             {saveState === "saving" && <Loader2 size={13} className="animate-spin" />}
             {saveState === "saved" && <Check size={13} className="text-green-600" />}
             {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : ""}
           </span>
           <button
             onClick={doSave}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            title="Save document"
+            aria-label="Save document"
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
           >
-            <Save size={15} /> Save
+            <Save size={16} />
           </button>
           <button
             onClick={onExport}
             disabled={exporting}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            className="flex h-9 items-center gap-2 rounded-md bg-[#3867d6] px-3 text-sm font-medium text-white hover:bg-[#2f58bd] disabled:opacity-60"
           >
             {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-            Export DOCX
+            <span className="hidden sm:inline">Export DOCX</span>
           </button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="shrink-0 border-b border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="studio-toolbar-in thin-scroll shrink-0 overflow-x-auto border-b border-[#cfd4d9] bg-[#f7f8f9]">
         <EditorToolbar editor={editor} />
       </div>
 
-      {/* Canvas */}
-      <div className="flex-1 overflow-auto bg-slate-100 py-8 thin-scroll">
-        <EditorContent editor={editor} />
+      <div className="studio-canvas-enter studio-canvas-grid thin-scroll flex-1 overflow-auto py-8">
+        <div className="doc-canvas">
+          <EditorContent editor={editor} />
+        </div>
       </div>
 
-      {/* Status bar */}
-      <div className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-1.5 text-xs text-slate-400">
+      <div className="flex h-7 items-center justify-between border-t border-[#cfd4d9] bg-[#f7f8f9] px-4 text-[11px] text-slate-500">
         <span>{words} words</span>
-        <span>Autosaves locally · syncs to server when available</span>
+        <span className="hidden sm:inline">Local autosave</span>
       </div>
     </div>
   );

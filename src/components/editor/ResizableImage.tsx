@@ -14,6 +14,11 @@ import {
   Trash2,
   RectangleHorizontal,
 } from "lucide-react";
+import {
+  EDITOR_PAGE_CONTENT_HEIGHT,
+  nextPageContentTop,
+  pageBottomFor,
+} from "./pageGeometry";
 
 type Wrap = "inline" | "left" | "right" | "center";
 
@@ -79,16 +84,45 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
     height?: number | null;
     wrap: Wrap;
   };
+  const wrapperRef = useRef<HTMLSpanElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const ratioRef = useRef(0);
+  const mountedRef = useRef(true);
+  const pagePushRef = useRef(0);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [dragHandle, setDragHandle] = useState<string | null>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [pagePush, setPagePush] = useState(0);
 
   const maxWidth = useCallback(() => {
     const dom = editor.view.dom as HTMLElement;
     const cs = getComputedStyle(dom);
     const pad = parseFloat(cs.paddingLeft || "0") + parseFloat(cs.paddingRight || "0");
     return Math.max(120, dom.clientWidth - pad - 4);
+  }, [editor]);
+
+  const updatePagePush = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    const dom = editor.view.dom as HTMLElement;
+    if (!wrapper || !dom) return;
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const editorRect = dom.getBoundingClientRect();
+    const topWithPush = wrapperRect.top - editorRect.top;
+    const rawTop = Math.max(0, topWithPush - pagePushRef.current);
+    const imageHeight = wrapper.offsetHeight;
+    if (!imageHeight || imageHeight > EDITOR_PAGE_CONTENT_HEIGHT) {
+      pagePushRef.current = 0;
+      if (mountedRef.current) setPagePush(0);
+      return;
+    }
+
+    const spillsPage = rawTop + imageHeight > pageBottomFor(rawTop);
+    const desired = spillsPage ? Math.max(0, Math.ceil(nextPageContentTop(rawTop) - rawTop)) : 0;
+    if (Math.abs(pagePushRef.current - desired) > 1) {
+      pagePushRef.current = desired;
+      if (mountedRef.current) setPagePush(desired);
+    }
   }, [editor]);
 
   // Set a sensible default size once the natural dimensions are known.
@@ -105,7 +139,8 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
       const h = height ?? Math.round(w / ratioRef.current);
       if (w !== width || !height) updateAttributes({ width: Math.round(w), height: Math.round(h) });
     }
-  }, [width, height, maxWidth, updateAttributes]);
+    requestAnimationFrame(updatePagePush);
+  }, [width, height, maxWidth, updateAttributes, updatePagePush]);
 
   // Data-URL / cached images may already be `complete` before onLoad binds.
   useEffect(() => {
@@ -113,6 +148,26 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
     if (img && img.complete && img.naturalWidth) onLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(updatePagePush);
+    return () => cancelAnimationFrame(frame);
+  }, [updatePagePush, width, height, wrap, size]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const update = () => requestAnimationFrame(updatePagePush);
+    const ro = new ResizeObserver(update);
+    const wrapper = wrapperRef.current;
+    if (wrapper) ro.observe(wrapper);
+    editor.on("transaction", update);
+    return () => {
+      mountedRef.current = false;
+      resizeCleanupRef.current?.();
+      ro.disconnect();
+      editor.off("transaction", update);
+    };
+  }, [editor, updatePagePush]);
 
   const startResize = useCallback(
     (e: React.PointerEvent, handle: string) => {
@@ -132,6 +187,7 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
       setDragHandle(handle);
 
       const onMove = (ev: PointerEvent) => {
+        if (!mountedRef.current) return;
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
         let w = startW;
@@ -151,11 +207,15 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
         updateAttributes({ width: w, height: h });
       };
       const onUp = () => {
-        setDragHandle(null);
-        setSize(null);
+        resizeCleanupRef.current = null;
+        if (mountedRef.current) {
+          setDragHandle(null);
+          setSize(null);
+        }
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
       };
+      resizeCleanupRef.current = onUp;
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
@@ -172,8 +232,11 @@ function ImageView({ node, updateAttributes, selected, editor, deleteNode }: Nod
   return (
     <NodeViewWrapper
       as="span"
+      ref={wrapperRef}
       className={`img-wrapper${selected ? " selected" : ""}`}
       data-wrap={wrap}
+      data-page-push={pagePush ? "true" : undefined}
+      style={{ marginTop: pagePush ? `${pagePush}px` : undefined }}
     >
       <img
         ref={imgRef}

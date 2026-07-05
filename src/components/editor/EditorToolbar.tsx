@@ -48,8 +48,8 @@ function Btn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-1.5 text-sm transition
-        ${active ? "bg-blue-100 text-blue-700" : "text-slate-600 hover:bg-slate-100"}
+      className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1.5 text-sm transition
+        ${active ? "bg-[#dce6fb] text-[#2853b8]" : "text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"}
         disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
@@ -58,7 +58,7 @@ function Btn({
 }
 
 function Divider() {
-  return <span className="mx-1 h-6 w-px bg-slate-200" />;
+  return <span className="mx-1 h-6 w-px bg-[#d5d9de]" />;
 }
 
 function Dropdown({
@@ -84,14 +84,14 @@ function Dropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex h-8 items-center gap-1 rounded-md px-2 text-sm text-slate-600 hover:bg-slate-100"
+        className="flex h-8 items-center gap-1 rounded px-2 text-sm text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"
       >
         {icon}
         {label && <span>{label}</span>}
         <ChevronDown size={13} />
       </button>
       {open && (
-        <div className="absolute left-0 top-9 z-30 min-w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+        <div className="studio-popover absolute left-0 top-9 z-30 min-w-44 rounded-md border border-[#cfd4d9] bg-white p-1 shadow-[0_12px_30px_rgba(20,27,38,0.16)]">
           {children(() => setOpen(false))}
         </div>
       )}
@@ -115,7 +115,7 @@ function MenuItem({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+      className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-[#eef1f3] disabled:opacity-40"
     >
       {icon}
       {children}
@@ -164,7 +164,7 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 shadow-sm">
+    <div className="flex h-12 min-w-max items-center gap-0.5 px-3">
       <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>
         <Undo2 size={16} />
       </Btn>

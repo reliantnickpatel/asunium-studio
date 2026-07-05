@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
+import type { Editor } from "@tiptap/core";
+import { EDITOR_PAGE, nextPageContentTop } from "./pageGeometry";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -20,6 +22,23 @@ export const PageBreak = Node.create({
   atom: true,
   selectable: true,
 
+  addAttributes() {
+    return {
+      height: {
+        default: EDITOR_PAGE.gap + EDITOR_PAGE.padding,
+        parseHTML: (el) => {
+          const raw = el.getAttribute("data-page-break-height");
+          const height = raw ? parseInt(raw, 10) : NaN;
+          return Number.isFinite(height) ? height : EDITOR_PAGE.gap + EDITOR_PAGE.padding;
+        },
+        renderHTML: (attrs) => ({
+          "data-page-break-height": String(attrs.height),
+          style: `height: ${attrs.height}px;`,
+        }),
+      },
+    };
+  },
+
   parseHTML() {
     return [{ tag: "div[data-page-break]" }];
   },
@@ -39,7 +58,12 @@ export const PageBreak = Node.create({
       setPageBreak:
         () =>
         ({ chain }) =>
-          chain().insertContent({ type: this.name }).run(),
+          chain()
+            .insertContent([
+              { type: this.name, attrs: { height: pageBreakHeightForEditor(this.editor) } },
+              { type: "paragraph" },
+            ])
+            .run(),
     };
   },
 
@@ -50,3 +74,17 @@ export const PageBreak = Node.create({
     };
   },
 });
+
+function pageBreakHeightForEditor(editor: Editor) {
+  const fallback = EDITOR_PAGE.height - EDITOR_PAGE.padding + EDITOR_PAGE.gap;
+  const dom = editor.view.dom as HTMLElement;
+
+  try {
+    const coords = editor.view.coordsAtPos(editor.state.selection.from);
+    const editorRect = dom.getBoundingClientRect();
+    const y = Math.max(EDITOR_PAGE.padding, coords.top - editorRect.top);
+    return Math.max(EDITOR_PAGE.gap + EDITOR_PAGE.padding, Math.ceil(nextPageContentTop(y) - y));
+  } catch {
+    return fallback;
+  }
+}

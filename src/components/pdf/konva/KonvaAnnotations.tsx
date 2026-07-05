@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+/* eslint-disable react-hooks/refs -- Konva stage sync is intentionally imperative for real-time canvas interaction. */
+
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Stage,
   Layer,
@@ -18,6 +20,7 @@ import type Konva from "konva";
 import {
   usePdfStore,
   type Annotation,
+  type ArrowData,
   type BoxKind,
 } from "../store";
 import type { StageApi } from "../useStage";
@@ -28,8 +31,6 @@ import TextEditorModal from "./TextEditorModal";
 const DRAG_THRESHOLD = 4; // image px
 const TEXT_DEFAULT_W = 180;
 const TEXT_DEFAULT_H = 72;
-const BOX_KINDS: BoxKind[] = ["rect", "ellipse", "circle", "diamond", "cloud"];
-
 type Draft = { kind: string; sx: number; sy: number; ex: number; ey: number } | null;
 type Marquee = { x: number; y: number; w: number; h: number } | null;
 
@@ -81,14 +82,14 @@ export default function KonvaAnnotations({
   const panRef = useRef<{ x: number; y: number } | null>(null);
   const draftRef = useRef<Draft>(null);
   const marqueeRef = useRef<Marquee>(null);
+  const arrowDragRef = useRef<{ id: string; data: ArrowData } | null>(null);
   const newTextRef = useRef<string | null>(null); // id of a freshly-created (empty) text
   const [draft, setDraft] = useState<Draft>(null);
-  const [marquee, setMarquee] = useState<Marquee>(null);
+  const [, setMarquee] = useState<Marquee>(null);
 
-  const world = useCallback(() => {
-    const s = stage.konvaStageRef.current;
-    return s?.getRelativePointerPosition() ?? { x: 0, y: 0 };
-  }, [stage.konvaStageRef]);
+  useEffect(() => {
+    stage.applyNow();
+  }, [stage]);
 
   /* ---- attach transformer to a single non-arrow selection ---- */
   useEffect(() => {
@@ -241,8 +242,8 @@ export default function KonvaAnnotations({
 
     // box shapes
     if (dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
-    let x = Math.min(d.sx, d.ex);
-    let y = Math.min(d.sy, d.ey);
+    const x = Math.min(d.sx, d.ex);
+    const y = Math.min(d.sy, d.ey);
     let w = dx;
     let h = dy;
     if (d.kind === "circle") {
@@ -327,6 +328,7 @@ export default function KonvaAnnotations({
   };
 
   const onStageDblClick = () => {
+    if (canPan) return;
     const s = stage.konvaStageRef.current;
     if (!s) return;
     const pos = s.getRelativePointerPosition();
@@ -345,18 +347,17 @@ export default function KonvaAnnotations({
   };
 
   const selectNode = (e: Konva.KonvaEventObject<unknown>, id: string) => {
-    if (tool !== "select") return;
+    if (canPan || tool !== "select") return;
     e.cancelBubble = true;
     const evt = e.evt as { shiftKey?: boolean };
     if (evt.shiftKey) toggleInSelection(id);
     else select([id]);
   };
 
-  const draggable = tool === "select" && !editingId;
+  const draggable = tool === "select" && !editingId && !canPan;
 
   /* ---- render a box/text annotation inside a positioned, draggable group ---- */
   const renderAnn = (a: Annotation) => {
-    const isSel = selectedIds.includes(a.id);
     if (a.kind === "arrow") {
       const d = a.data;
       return (
@@ -374,18 +375,48 @@ export default function KonvaAnnotations({
           lineJoin="round"
           onMouseDown={(e) => selectNode(e, a.id)}
           onTouchStart={(e) => selectNode(e, a.id)}
-          onDragStart={() => beginGesture()}
+          x={0}
+          y={0}
+          onDragStart={() => {
+            if (canPan) return;
+            beginGesture();
+            arrowDragRef.current = { id: a.id, data: { ...d } };
+          }}
+          onDragMove={(e) => {
+            if (canPan) return;
+            const start = arrowDragRef.current;
+            if (!start || start.id !== a.id) return;
+            const nx = e.target.x();
+            const ny = e.target.y();
+            updateData(a.id, {
+              x1: start.data.x1 + nx,
+              y1: start.data.y1 + ny,
+              x2: start.data.x2 + nx,
+              y2: start.data.y2 + ny,
+              cx: start.data.cx + nx,
+              cy: start.data.cy + ny,
+            });
+            e.target.position({ x: 0, y: 0 });
+          }}
           onDragEnd={(e) => {
+            if (canPan) {
+              e.target.position({ x: 0, y: 0 });
+              arrowDragRef.current = null;
+              return;
+            }
+            const start = arrowDragRef.current;
             const nx = e.target.x();
             const ny = e.target.y();
             e.target.position({ x: 0, y: 0 });
+            arrowDragRef.current = null;
+            if (!start || (nx === 0 && ny === 0)) return;
             updateData(a.id, {
-              x1: d.x1 + nx,
-              y1: d.y1 + ny,
-              x2: d.x2 + nx,
-              y2: d.y2 + ny,
-              cx: d.cx + nx,
-              cy: d.cy + ny,
+              x1: start.data.x1 + nx,
+              y1: start.data.y1 + ny,
+              x2: start.data.x2 + nx,
+              y2: start.data.y2 + ny,
+              cx: start.data.cx + nx,
+              cy: start.data.cy + ny,
             });
           }}
           sceneFunc={(ctx, shape) => {
@@ -410,12 +441,16 @@ export default function KonvaAnnotations({
       onMouseDown: (e: Konva.KonvaEventObject<unknown>) => selectNode(e, a.id),
       onTouchStart: (e: Konva.KonvaEventObject<unknown>) => selectNode(e, a.id),
       onDblClick: () => {
+        if (canPan) return;
         if (a.kind === "text") setEditing(a.id);
       },
       onDblTap: () => {
+        if (canPan) return;
         if (a.kind === "text") setEditing(a.id);
       },
       onDragStart: () => beginGesture(),
+      onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
+        updateData(a.id, { x: e.target.x(), y: e.target.y() }),
       onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
         updateData(a.id, { x: e.target.x(), y: e.target.y() }),
       onTransformEnd: () => onTransformEnd(a),
@@ -530,10 +565,6 @@ export default function KonvaAnnotations({
           ref={stage.konvaStageRef}
           width={viewportW}
           height={viewportH}
-          scaleX={stage.view.scale}
-          scaleY={stage.view.scale}
-          x={stage.view.x}
-          y={stage.view.y}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
@@ -562,6 +593,7 @@ export default function KonvaAnnotations({
             {/* transformer for single non-arrow selection */}
             <Transformer
               ref={trRef}
+              listening={!canPan}
               rotateEnabled={false}
               flipEnabled={false}
               keepRatio={selectedKind === "text"}
@@ -608,9 +640,13 @@ export default function KonvaAnnotations({
                       fill={h === "cp" ? "#bfdbfe" : "#ffffff"}
                       stroke="#2563eb"
                       strokeWidth={1.5 / scale}
-                      draggable
-                      onDragStart={() => beginGesture()}
+                      draggable={!canPan}
+                      onDragStart={() => {
+                        if (canPan) return;
+                        beginGesture();
+                      }}
                       onDragMove={(e) => {
+                        if (canPan) return;
                         const nx = e.target.x();
                         const ny = e.target.y();
                         if (h === "p1") updateData(selArrow.id, { x1: nx, y1: ny });
@@ -629,10 +665,12 @@ export default function KonvaAnnotations({
                 x={selectionBBox.x + selectionBBox.width + delR * 0.6}
                 y={selectionBBox.y - delR * 0.6}
                 onMouseDown={(e) => {
+                  if (canPan) return;
                   e.cancelBubble = true;
                   usePdfStore.getState().removeSelected();
                 }}
                 onTouchStart={(e) => {
+                  if (canPan) return;
                   e.cancelBubble = true;
                   usePdfStore.getState().removeSelected();
                 }}

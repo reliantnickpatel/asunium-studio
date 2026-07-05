@@ -32,8 +32,13 @@ function readAll(): StoredDoc[] {
 }
 
 function writeAll(docs: StoredDoc[]) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(LS_KEY, JSON.stringify(docs));
+  if (typeof window === "undefined") return true;
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(docs));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function localUpsert(doc: StoredDoc) {
@@ -41,7 +46,12 @@ function localUpsert(doc: StoredDoc) {
   const i = all.findIndex((d) => d.id === doc.id);
   if (i >= 0) all[i] = doc;
   else all.unshift(doc);
-  writeAll(all);
+  if (writeAll(all)) return true;
+
+  // Image-heavy editor documents can exceed localStorage. Keep the newest
+  // document if possible and drop older cache entries instead of breaking edit.
+  const compact = [doc, ...all.filter((d) => d.id !== doc.id)].slice(0, 3);
+  return writeAll(compact);
 }
 
 let serverOk: boolean | null = null;
@@ -60,9 +70,9 @@ async function tryServer<T>(fn: () => Promise<T>): Promise<T | null> {
 
 export async function saveDoc(doc: StoredDoc): Promise<StoredDoc> {
   const withTime = { ...doc, updatedAt: new Date().toISOString() };
-  localUpsert(withTime); // always local first
+  const localSaved = localUpsert(withTime); // always local first
 
-  await tryServer(async () => {
+  const serverSaved = await tryServer(async () => {
     const res = await fetch(`/api/documents/${doc.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -71,6 +81,8 @@ export async function saveDoc(doc: StoredDoc): Promise<StoredDoc> {
     if (!res.ok) throw new Error("save failed");
     return res.json();
   });
+
+  if (!localSaved && !serverSaved) throw new Error("Document could not be saved");
 
   return withTime;
 }

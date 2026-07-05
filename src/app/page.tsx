@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import AsuniumLogo from "@/components/AsuniumLogo";
 import { listDocs, type StoredDoc } from "@/lib/persistence";
 import { hasCachedPdf } from "@/lib/pdf/fileCache";
 import {
@@ -67,13 +68,7 @@ export default function Home() {
     <main className="studio-home-dark min-h-screen text-[#e9edf2]">
       <aside className="studio-sidebar-in fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/10 bg-[#07080a] text-slate-300 md:flex">
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3867d6] text-xs font-bold text-white">
-            AS
-          </span>
-          <div>
-            <div className="text-sm font-semibold text-white">Asunium Studio</div>
-            <div className="text-[11px] text-slate-500">Document workspace</div>
-          </div>
+          <AsuniumLogo size={36} showWordmark markClassName="bg-[#252525]" />
         </div>
 
         <nav className="space-y-1 px-3 py-4 text-sm">
@@ -102,7 +97,7 @@ export default function Home() {
       <section className="min-h-screen md:pl-60">
         <header className="studio-appbar flex h-16 items-center justify-between border-b border-white/10 bg-[#0d0f13] px-5 md:px-8">
           <div className="flex items-center gap-3 md:hidden">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-[#3867d6] text-xs font-bold text-white">AS</span>
+            <AsuniumLogo size={34} />
             <span className="text-sm font-semibold">Asunium Studio</span>
           </div>
           <div className="hidden items-center gap-2 text-sm text-[#8e96a2] md:flex">

@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FileUp, Loader2, Save, Check, FileText, Download, Home } from "lucide-react";
+import { FileUp, Loader2, Save, Check, Download, Home } from "lucide-react";
+import AsuniumLogo from "@/components/AsuniumLogo";
 import { loadPdf, getPageSizes, type PDFDocumentProxy, type PageSize } from "./pdfjs";
 import PdfPage from "./PdfCanvasPage";
 import PdfToolbar from "./PdfToolbar";
@@ -25,6 +26,14 @@ const KEY_TO_TOOL: Record<string, ToolId> = {
   d: "diamond",
   u: "cloud",
   a: "arrow",
+};
+const KEY_TO_COLOR: Record<string, string> = {
+  "1": "#ff5a5f",
+  "2": "#4f7cff",
+  "3": "#36c98f",
+  "4": "#ffb347",
+  "5": "#a879ff",
+  "6": "#f2f4f7",
 };
 
 const GAP = 28; // world-px gap between pages
@@ -70,8 +79,7 @@ export default function PdfViewer() {
   const annotationsLoadedRef = useRef(true);
   const openSeqRef = useRef(0);
 
-  const { setTool, setSpacePan, undo, redo, removeSelected, loadAnnotations, annotations } =
-    usePdfStore();
+  const { setTool, setSpacePan, undo, redo, removeSelected, loadAnnotations, annotations } = usePdfStore();
   const tool = usePdfStore((s) => s.tool);
   const spacePan = usePdfStore((s) => s.spacePan);
   const canPan = tool === "pan" || spacePan;
@@ -223,68 +231,6 @@ export default function PdfViewer() {
     };
   }, [annotations, pdf, fileName]);
 
-  /* ---------- keyboard: tools, zoom, fit, history ---------- */
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const t = e.target as HTMLElement;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
-      }
-      if (mod && e.key.toLowerCase() === "y") {
-        e.preventDefault();
-        redo();
-        return;
-      }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (usePdfStore.getState().selectedIds.length) {
-          e.preventDefault();
-          removeSelected();
-        }
-        return;
-      }
-      if (e.key === "Escape") {
-        usePdfStore.getState().clearSelection();
-        return;
-      }
-      if (e.key === "Enter" && !mod) {
-        // edit the single selected text annotation
-        const st = usePdfStore.getState();
-        if (st.selectedIds.length === 1) {
-          const a = st.annotations.find((x) => x.id === st.selectedIds[0]);
-          if (a && a.kind === "text") {
-            e.preventDefault();
-            st.setEditing(a.id);
-          }
-        }
-        return;
-      }
-      if (e.key === "=" || e.key === "+") {
-        e.preventDefault();
-        stage.zoomBy(1.2);
-        return;
-      }
-      if (e.key === "-" || e.key === "_") {
-        e.preventDefault();
-        stage.zoomBy(1 / 1.2);
-        return;
-      }
-      if (e.key.toLowerCase() === "f" && !mod) {
-        e.preventDefault();
-        stage.fit(null);
-        return;
-      }
-      const tk = KEY_TO_TOOL[e.key.toLowerCase()];
-      if (tk && !mod) setTool(tk);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [undo, redo, removeSelected, setTool, stage]);
-
   /* ---------- hold Space → temporary pan (and Space+wheel zooms) ---------- */
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
@@ -320,7 +266,7 @@ export default function PdfViewer() {
     };
   }, [downloadLink]);
 
-  const persistPdfAnnotations = async (currentAnnotations: Annotation[]) => {
+  const persistPdfAnnotations = useCallback(async (currentAnnotations: Annotation[]) => {
     if (!docIdRef.current) return false;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     setSaveState("saving");
@@ -339,11 +285,14 @@ export default function PdfViewer() {
       setSaveState("error");
       return false;
     }
-  };
+  }, [fileName]);
 
-  const manualSave = async () => persistPdfAnnotations(usePdfStore.getState().annotations);
+  const manualSave = useCallback(
+    async () => persistPdfAnnotations(usePdfStore.getState().annotations),
+    [persistPdfAnnotations]
+  );
 
-  const downloadAnnotatedPdf = async () => {
+  const downloadAnnotatedPdf = useCallback(async () => {
     if (!pdfBytesRef.current || !layout || !annotationsLoaded) return;
     setExportingPdf(true);
     try {
@@ -365,7 +314,147 @@ export default function PdfViewer() {
     } finally {
       setExportingPdf(false);
     }
-  };
+  }, [annotationsLoaded, fileName, layout, persistPdfAnnotations]);
+
+  /* ---------- keyboard: tools, zoom, fit, history, save/export ---------- */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      const mod = e.ctrlKey || e.metaKey;
+      const target = e.target as HTMLElement | null;
+      const editingText =
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || Boolean(target?.isContentEditable);
+
+      if (mod && key === "s") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          if (pdf && !exportingPdf && annotationsLoaded) void downloadAnnotatedPdf();
+        } else if (pdf) {
+          void manualSave();
+        }
+        return;
+      }
+
+      if (mod && key === "o") {
+        e.preventDefault();
+        fileInput.current?.click();
+        return;
+      }
+
+      if (editingText) return;
+
+      const store = usePdfStore.getState();
+      if (mod && key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (mod && key === "y") {
+        e.preventDefault();
+        redo();
+        return;
+      }
+      if (mod && key === "a") {
+        e.preventDefault();
+        store.selectAll();
+        return;
+      }
+      if (mod && key === "d") {
+        e.preventDefault();
+        store.duplicateSelected();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (store.selectedIds.length) {
+          e.preventDefault();
+          removeSelected();
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        store.clearSelection();
+        setTool("select");
+        return;
+      }
+      if (e.key === "Enter" && !mod) {
+        if (store.selectedIds.length === 1) {
+          const annotation = store.annotations.find((item) => item.id === store.selectedIds[0]);
+          if (annotation?.kind === "text") {
+            e.preventDefault();
+            store.setEditing(annotation.id);
+          }
+        }
+        return;
+      }
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const panStep = e.shiftKey ? 160 : 48;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+        if (store.selectedIds.length > 0) store.nudgeSelected(dx, dy);
+        else stage.panBy(e.key === "ArrowLeft" ? panStep : e.key === "ArrowRight" ? -panStep : 0, e.key === "ArrowUp" ? panStep : e.key === "ArrowDown" ? -panStep : 0);
+        return;
+      }
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        stage.zoomBy(1.2);
+        return;
+      }
+      if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        stage.zoomBy(1 / 1.2);
+        return;
+      }
+      if ((key === "f" || key === "0") && !mod) {
+        e.preventDefault();
+        stage.fit(null);
+        return;
+      }
+      if ((e.key === "[" || e.key === "]") && !mod) {
+        e.preventDefault();
+        const selected = store.annotations.filter((annotation) => store.selectedIds.includes(annotation.id));
+        const textOnly = selected.length > 0 && selected.every((annotation) => annotation.kind === "text");
+        const delta = e.key === "]" ? 1 : -1;
+        if (textOnly) {
+          const nextFont = Math.max(6, Math.min(96, store.fontSize + delta));
+          store.setFontSize(nextFont);
+          store.applyStyleToSelection({ size: nextFont });
+        } else {
+          const nextStroke = Math.max(1, Math.min(10, store.strokeSize + delta));
+          store.setStrokeSize(nextStroke);
+          if (store.selectedIds.length > 0) store.applyStyleToSelection({ size: nextStroke });
+        }
+        return;
+      }
+      const shortcutColor = KEY_TO_COLOR[e.key];
+      if (shortcutColor && !mod) {
+        e.preventDefault();
+        store.setColor(shortcutColor);
+        if (store.selectedIds.length > 0) store.applyStyleToSelection({ color: shortcutColor });
+        return;
+      }
+      const nextTool = KEY_TO_TOOL[key];
+      if (nextTool && !mod) {
+        e.preventDefault();
+        setTool(nextTool);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    annotationsLoaded,
+    downloadAnnotatedPdf,
+    exportingPdf,
+    manualSave,
+    pdf,
+    redo,
+    removeSelected,
+    setTool,
+    stage,
+    undo,
+  ]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#0b0d11]">
@@ -375,7 +464,7 @@ export default function PdfViewer() {
         </Link>
         <span className="h-6 w-px bg-white/10" />
         <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#d8594f] text-white"><FileText size={17} /></span>
+          <AsuniumLogo size={34} markClassName="bg-[#252525]" />
           <span className="max-w-[180px] truncate text-white sm:max-w-[300px]">{fileName || "PDF Studio"}</span>
         </div>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
@@ -395,17 +484,18 @@ export default function PdfViewer() {
           {pdf && (
             <button
               onClick={manualSave}
-                title="Save annotations"
-                aria-label="Save annotations"
-                className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-              >
-                <Save size={16} />
+              title="Save annotations (Ctrl/Cmd+S)"
+              aria-label="Save annotations"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              <Save size={16} />
             </button>
           )}
           {pdf && (
             <button
               onClick={downloadAnnotatedPdf}
               disabled={exportingPdf || !annotationsLoaded}
+              title="Download annotated PDF (Ctrl/Cmd+Shift+S)"
               className="flex h-9 items-center gap-2 rounded-md border border-white/10 px-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white disabled:opacity-60"
             >
               {exportingPdf ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
@@ -424,6 +514,7 @@ export default function PdfViewer() {
           )}
           <button
             onClick={() => fileInput.current?.click()}
+            title="Open PDF (Ctrl/Cmd+O)"
             className="flex h-9 items-center gap-2 rounded-md bg-[#3867d6] px-3 text-sm font-medium text-white hover:bg-[#2f58bd]"
           >
             <FileUp size={15} /> <span className="hidden sm:inline">Open PDF</span>

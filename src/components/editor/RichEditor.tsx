@@ -6,17 +6,18 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
+import UnderlineExtension from "@tiptap/extension-underline";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import Link from "next/link";
+import AsuniumLogo from "@/components/AsuniumLogo";
 import {
   Download,
   Save,
   Check,
   Loader2,
-  FileText,
   FilePlus2,
   Home,
 } from "lucide-react";
@@ -44,6 +45,7 @@ export default function RichEditor() {
       StarterKit.configure({
         link: { openOnClick: false, autolink: true },
       }),
+      UnderlineExtension,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyle,
       Color,
@@ -113,7 +115,19 @@ export default function RichEditor() {
     };
   }, [editor]);
 
-  const onExport = async () => {
+  const editLink = useCallback(() => {
+    if (!editor) return;
+    const prev = editor.getAttributes("link").href as string | undefined;
+    const url = window.prompt("Link URL", prev || "https://");
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  }, [editor]);
+
+  const onExport = useCallback(async () => {
     if (!editor) return;
     setExporting(true);
     try {
@@ -121,7 +135,86 @@ export default function RichEditor() {
     } finally {
       setExporting(false);
     }
-  };
+  }, [editor, title]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const onKey = (event: KeyboardEvent) => {
+      const mod = event.ctrlKey || event.metaKey;
+      if (!mod) return;
+      const key = event.key.toLowerCase();
+
+      if (key === "s") {
+        event.preventDefault();
+        if (event.shiftKey) void onExport();
+        else void doSave();
+        return;
+      }
+
+      if (key === "k") {
+        event.preventDefault();
+        editLink();
+        return;
+      }
+
+      if (event.altKey && event.code === "Digit0") {
+        event.preventDefault();
+        editor.chain().focus().setParagraph().run();
+        return;
+      }
+
+      if (event.altKey && ["Digit1", "Digit2", "Digit3"].includes(event.code)) {
+        event.preventDefault();
+        const level = Number(event.code.replace("Digit", "")) as 1 | 2 | 3;
+        editor.chain().focus().toggleHeading({ level }).run();
+        return;
+      }
+
+      if (event.shiftKey && event.code === "Digit7") {
+        event.preventDefault();
+        editor.chain().focus().toggleOrderedList().run();
+        return;
+      }
+
+      if (event.shiftKey && event.code === "Digit8") {
+        event.preventDefault();
+        editor.chain().focus().toggleBulletList().run();
+        return;
+      }
+
+      if (event.shiftKey && key === "x") {
+        event.preventDefault();
+        editor.chain().focus().toggleStrike().run();
+        return;
+      }
+
+      if (event.altKey && key === "b") {
+        event.preventDefault();
+        editor.chain().focus().toggleBlockquote().run();
+        return;
+      }
+
+      if (event.altKey && key === "h") {
+        event.preventDefault();
+        editor.chain().focus().toggleHighlight({ color: "#fef08a" }).run();
+        return;
+      }
+
+      if (event.altKey && key === "t") {
+        event.preventDefault();
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        return;
+      }
+
+      if (event.shiftKey && ["l", "e", "r", "j"].includes(key)) {
+        event.preventDefault();
+        const align = key === "l" ? "left" : key === "e" ? "center" : key === "r" ? "right" : "justify";
+        editor.chain().focus().setTextAlign(align).run();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [doSave, editLink, editor, onExport]);
 
   if (!editor) {
     return (
@@ -139,7 +232,7 @@ export default function RichEditor() {
         </Link>
         <span className="h-6 w-px bg-white/10" />
         <div className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#3867d6] text-white"><FileText size={17} /></span>
+          <AsuniumLogo size={34} markClassName="bg-[#252525]" />
           <input
             value={title}
             onChange={(e) => {
@@ -178,7 +271,7 @@ export default function RichEditor() {
           </span>
           <button
             onClick={doSave}
-            title="Save document"
+            title="Save document (Ctrl/Cmd+S)"
             aria-label="Save document"
             className="flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
           >
@@ -187,6 +280,7 @@ export default function RichEditor() {
           <button
             onClick={onExport}
             disabled={exporting}
+            title="Export DOCX (Ctrl/Cmd+Shift+S)"
             className="flex h-9 items-center gap-2 rounded-md bg-[#3867d6] px-3 text-sm font-medium text-white hover:bg-[#2f58bd] disabled:opacity-60"
           >
             {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}

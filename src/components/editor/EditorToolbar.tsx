@@ -48,11 +48,12 @@ function Btn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1.5 text-sm transition
+      className={`studio-tip-host flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1.5 text-sm transition
         ${active ? "bg-[#dce6fb] text-[#2853b8]" : "text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"}
         disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
+      <span className="studio-tip studio-tip-bottom">{title}</span>
     </button>
   );
 }
@@ -64,10 +65,12 @@ function Divider() {
 function Dropdown({
   label,
   icon,
+  title,
   children,
 }: {
   label?: string;
   icon: ReactNode;
+  title: string;
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -83,12 +86,14 @@ function Dropdown({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        title={title}
         onClick={() => setOpen((o) => !o)}
-        className="flex h-8 items-center gap-1 rounded px-2 text-sm text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"
+        className="studio-tip-host flex h-8 items-center gap-1 rounded px-2 text-sm text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"
       >
         {icon}
         {label && <span>{label}</span>}
         <ChevronDown size={13} />
+        <span className="studio-tip studio-tip-bottom">{title}</span>
       </button>
       {open && (
         <div className="studio-popover absolute left-0 top-9 z-30 min-w-44 rounded-md border border-[#cfd4d9] bg-white p-1 shadow-[0_12px_30px_rgba(20,27,38,0.16)]">
@@ -174,7 +179,7 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       <Divider />
 
       {/* Heading / block type */}
-      <Dropdown label={headingValue} icon={<Type size={15} />}>
+      <Dropdown label={headingValue} icon={<Type size={15} />} title="Change paragraph style or heading level">
         {(close) => (
           <>
             <MenuItem
@@ -212,12 +217,12 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       <Btn title="Underline (Ctrl+U)" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}>
         <Underline size={16} />
       </Btn>
-      <Btn title="Strikethrough" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
+      <Btn title="Strikethrough (Ctrl/Cmd+Shift+X)" active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}>
         <Strikethrough size={16} />
       </Btn>
 
       {/* Text color */}
-      <Dropdown icon={<span className="font-bold text-slate-700">A</span>}>
+      <Dropdown icon={<span className="font-bold text-slate-700">A</span>} title="Change selected text color">
         {(close) => (
           <div className="p-1">
             <div className="mb-1 px-1 text-xs font-medium text-slate-400">Text color</div>
@@ -248,7 +253,7 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       </Dropdown>
 
       {/* Highlight */}
-      <Dropdown icon={<Highlighter size={16} />}>
+      <Dropdown icon={<Highlighter size={16} />} title="Highlight selected text">
         {(close) => (
           <div className="p-1">
             <div className="mb-1 px-1 text-xs font-medium text-slate-400">Highlight</div>
@@ -279,30 +284,30 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       </Dropdown>
       <Divider />
 
-      <Btn title="Align left" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
+      <Btn title="Align left (Ctrl/Cmd+Shift+L)" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()}>
         <AlignLeft size={16} />
       </Btn>
-      <Btn title="Align center" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
+      <Btn title="Align center (Ctrl/Cmd+Shift+E)" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()}>
         <AlignCenter size={16} />
       </Btn>
-      <Btn title="Align right" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
+      <Btn title="Align right (Ctrl/Cmd+Shift+R)" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()}>
         <AlignRight size={16} />
       </Btn>
-      <Btn title="Justify" active={editor.isActive({ textAlign: "justify" })} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
+      <Btn title="Justify (Ctrl/Cmd+Shift+J)" active={editor.isActive({ textAlign: "justify" })} onClick={() => editor.chain().focus().setTextAlign("justify").run()}>
         <AlignJustify size={16} />
       </Btn>
       <Divider />
 
-      <Btn title="Bullet list" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+      <Btn title="Bullet list (Ctrl/Cmd+Shift+8)" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}>
         <List size={16} />
       </Btn>
-      <Btn title="Numbered list" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+      <Btn title="Numbered list (Ctrl/Cmd+Shift+7)" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
         <ListOrdered size={16} />
       </Btn>
       <Divider />
 
       {/* Table */}
-      <Dropdown icon={<TableIcon size={16} />} label="Table">
+      <Dropdown icon={<TableIcon size={16} />} label="Table" title="Insert or edit a table">
         {(close) => (
           <>
             <MenuItem
@@ -369,7 +374,7 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       <input ref={imgInput} type="file" accept="image/*" hidden onChange={onPickImage} />
 
       <Btn
-        title="Insert / edit link"
+        title="Insert / edit link (Ctrl/Cmd+K)"
         active={editor.isActive("link")}
         onClick={() => {
           const prev = editor.getAttributes("link").href as string | undefined;
@@ -388,7 +393,7 @@ export default function EditorToolbar({ editor }: { editor: Editor }) {
       <Divider />
 
       <Btn
-        title="Insert page break (new page)"
+        title="Insert page break (Ctrl/Cmd+Enter)"
         onClick={() => editor.chain().focus().setPageBreak().run()}
       >
         <SeparatorHorizontal size={16} />

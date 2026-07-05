@@ -61,6 +61,7 @@ type PdfState = {
   setSpacePan: (v: boolean) => void;
 
   select: (ids: string[]) => void;
+  selectAll: () => void;
   toggleInSelection: (id: string) => void;
   clearSelection: () => void;
 
@@ -70,6 +71,8 @@ type PdfState = {
   patchAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
   removeSelected: () => void;
+  duplicateSelected: () => void;
+  nudgeSelected: (dx: number, dy: number) => void;
   clearAll: () => void;
 
   setEditing: (id: string | null) => void;
@@ -103,6 +106,7 @@ export const usePdfStore = create<PdfState>((set, get) => ({
   setSpacePan: (spacePan) => set({ spacePan }),
 
   select: (ids) => set({ selectedIds: ids }),
+  selectAll: () => set((s) => ({ selectedIds: s.annotations.map((annotation) => annotation.id) })),
   toggleInSelection: (id) =>
     set((s) => ({
       selectedIds: s.selectedIds.includes(id)
@@ -147,6 +151,78 @@ export const usePdfStore = create<PdfState>((set, get) => ({
     set((s) => ({
       annotations: s.annotations.filter((a) => !selectedIds.includes(a.id)),
       selectedIds: [],
+    }));
+  },
+
+  duplicateSelected: () => {
+    const { annotations, selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    get().beginGesture();
+    const copies = annotations
+      .filter((annotation) => selectedIds.includes(annotation.id))
+      .map((annotation) => ({
+        ...annotation,
+        id: nanoid(9),
+        data:
+          annotation.kind === "arrow"
+            ? {
+                ...annotation.data,
+                x1: annotation.data.x1 + 18,
+                y1: annotation.data.y1 + 18,
+                x2: annotation.data.x2 + 18,
+                y2: annotation.data.y2 + 18,
+                cx: annotation.data.cx + 18,
+                cy: annotation.data.cy + 18,
+              }
+            : {
+                ...annotation.data,
+                x: annotation.data.x + 18,
+                y: annotation.data.y + 18,
+              },
+      })) as Annotation[];
+    set((s) => ({ annotations: [...s.annotations, ...copies], selectedIds: copies.map((copy) => copy.id) }));
+  },
+
+  nudgeSelected: (dx, dy) => {
+    const { selectedIds } = get();
+    if (selectedIds.length === 0) return;
+    get().beginGesture();
+    set((s) => ({
+      annotations: s.annotations.map((annotation) => {
+        if (!selectedIds.includes(annotation.id)) return annotation;
+        if (annotation.kind === "arrow") {
+          return {
+            ...annotation,
+            data: {
+              ...annotation.data,
+              x1: annotation.data.x1 + dx,
+              y1: annotation.data.y1 + dy,
+              x2: annotation.data.x2 + dx,
+              y2: annotation.data.y2 + dy,
+              cx: annotation.data.cx + dx,
+              cy: annotation.data.cy + dy,
+            },
+          };
+        }
+        if (annotation.kind === "text") {
+          return {
+            ...annotation,
+            data: {
+              ...annotation.data,
+              x: annotation.data.x + dx,
+              y: annotation.data.y + dy,
+            },
+          };
+        }
+        return {
+          ...annotation,
+          data: {
+            ...annotation.data,
+            x: annotation.data.x + dx,
+            y: annotation.data.y + dy,
+          },
+        };
+      }),
     }));
   },
 

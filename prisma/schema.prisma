@@ -1,0 +1,29 @@
+// Asunium Studio — database schema
+//
+// Default provider is SQLite so the backend works out-of-the-box on any Node
+// host (and persists on a self-hosted/"old laptop" deployment).
+//
+// For a serverless deploy (Vercel), switch `provider` to "postgresql" and point
+// DATABASE_URL at a Neon / Vercel Postgres connection string, then run
+// `npx prisma db push`. The frontend also falls back to localStorage, so the
+// app works even if no database is configured.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Document {
+  id        String   @id
+  kind      String // "editor" | "pdf"
+  title     String
+  data      String // editor: HTML · pdf: JSON annotation state
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind])
+}

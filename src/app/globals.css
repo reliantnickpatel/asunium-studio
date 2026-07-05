@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,15 +12,311 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ============================================================
+   RICH TEXT EDITOR (Tiptap) content styling
+   ============================================================ */
+.tiptap {
+  outline: none;
+  min-height: 100%;
+  line-height: 1.6;
+  color: #1e293b;
+  font-size: 15px;
+}
+.tiptap:focus {
+  outline: none;
+}
+.tiptap p {
+  margin: 0 0 0.6em;
+}
+.tiptap h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin: 0.6em 0 0.3em;
+  line-height: 1.2;
+}
+.tiptap h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin: 0.6em 0 0.3em;
+  line-height: 1.25;
+}
+.tiptap h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.tiptap ul {
+  list-style: disc;
+  padding-left: 1.6em;
+  margin: 0 0 0.6em;
+}
+.tiptap ol {
+  list-style: decimal;
+  padding-left: 1.6em;
+  margin: 0 0 0.6em;
+}
+.tiptap li {
+  margin: 0.15em 0;
+}
+.tiptap li p {
+  margin: 0;
+}
+.tiptap a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.tiptap blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 1em;
+  color: #475569;
+  margin: 0 0 0.6em;
+}
+.tiptap hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 1em 0;
+}
+.tiptap mark {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Placeholder */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #94a3b8;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Tables */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.5em 0 1em;
+  overflow: hidden;
+}
+.tiptap table td,
+.tiptap table th {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  min-width: 1em;
+}
+.tiptap table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  text-align: left;
+}
+.tiptap table .selectedCell:after {
+  background: rgba(37, 99, 235, 0.16);
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.tiptap table .column-resize-handle {
+  background-color: #2563eb;
+  bottom: -2px;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 3px;
+  pointer-events: none;
+}
+.tiptap .tableWrapper {
+  overflow-x: auto;
+}
+.tiptap.resize-cursor {
+  cursor: col-resize;
+}
+
+/* ===== Word-like image handling ===== */
+.tiptap .img-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+}
+.tiptap .img-wrapper img {
+  display: block;
+  max-width: 100%;
+  border-radius: 2px;
+}
+/* wrap / layout modes */
+.tiptap .img-wrapper[data-wrap="inline"] {
+  vertical-align: bottom;
+  margin: 2px 3px;
+}
+.tiptap .img-wrapper[data-wrap="left"] {
+  float: left;
+  margin: 4px 18px 8px 0;
+}
+.tiptap .img-wrapper[data-wrap="right"] {
+  float: right;
+  margin: 4px 0 8px 18px;
+}
+.tiptap .img-wrapper[data-wrap="center"] {
+  display: block;
+  float: none;
+  margin: 12px auto;
+}
+.tiptap .img-wrapper.selected img {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+/* resize handles */
+.tiptap .img-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1.5px solid #2563eb;
+  border-radius: 2px;
+  z-index: 20;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.3);
+}
+
+/* floating layout-options toolbar */
+.tiptap .img-toolbar {
+  position: absolute;
+  top: -42px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #0f172a;
+  padding: 4px;
+  border-radius: 9px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.35);
+  z-index: 30;
+  line-height: 1;
+  white-space: nowrap;
+}
+.tiptap .img-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border-radius: 6px;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+.tiptap .img-tool-btn:hover {
+  background: #1e293b;
+  color: #fff;
+}
+.tiptap .img-tool-btn.active {
+  background: #2563eb;
+  color: #fff;
+}
+.tiptap .img-tool-btn.danger:hover {
+  background: #dc2626;
+  color: #fff;
+}
+.tiptap .img-tool-sep {
+  width: 1px;
+  height: 18px;
+  background: #334155;
+  margin: 0 2px;
+}
+.tiptap .img-size-badge {
+  position: absolute;
+  right: 0;
+  bottom: -22px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 4px;
+  z-index: 30;
+}
+
+/* Page break node */
+.tiptap .page-break-node {
+  height: 0;
+  border-top: 2px dashed #cbd5e1;
+  margin: 1.5em -72px;
+  position: relative;
+}
+.tiptap .page-break-node::after {
+  content: "Page break";
+  position: absolute;
+  right: 72px;
+  top: -0.75em;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+.tiptap .page-break-node.ProseMirror-selectednode {
+  border-top-color: #2563eb;
+}
+
+/* Paged look for the editor "document" */
+.doc-page {
+  background: #ffffff;
+  width: 816px;
+  min-height: 1056px;
+  padding: 72px;
+  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1),
+    0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* ============================================================
+   PDF VIEWER + annotation layer
+   ============================================================ */
+.pdf-page-canvas {
+  display: block;
+}
+.annotation-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+.annotation-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.selection-handle {
+  fill: #fff;
+  stroke: #2563eb;
+  stroke-width: 1.5;
+  cursor: nwse-resize;
+}
+
+/* Utility: thin scrollbars */
+.thin-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }

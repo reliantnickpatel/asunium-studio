@@ -29,6 +29,9 @@ import {
   SeparatorHorizontal,
 } from "lucide-react";
 
+const tooltipBottom =
+  "pointer-events-none absolute left-1/2 top-[calc(100%+10px)] z-[80] hidden w-max max-w-[220px] -translate-x-1/2 rounded-md border border-white/10 bg-[#07080b]/95 px-2.5 py-1.5 text-center text-[11px] font-semibold leading-snug text-white shadow-[0_18px_45px_rgba(0,0,0,0.35)] group-hover:block group-focus-visible:block";
+
 function Btn({
   onClick,
   active,
@@ -48,12 +51,12 @@ function Btn({
       title={title}
       onClick={onClick}
       disabled={disabled}
-      className={`studio-tip-host flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1.5 text-sm transition
+      className={`group relative flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1.5 text-sm transition
         ${active ? "bg-[#dce6fb] text-[#2853b8]" : "text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"}
         disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
-      <span className="studio-tip studio-tip-bottom">{title}</span>
+      <span className={tooltipBottom}>{title}</span>
     </button>
   );
 }
@@ -88,12 +91,12 @@ function Dropdown({
         type="button"
         title={title}
         onClick={() => setOpen((o) => !o)}
-        className="studio-tip-host flex h-8 items-center gap-1 rounded px-2 text-sm text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"
+        className="group relative flex h-8 items-center gap-1 rounded px-2 text-sm text-slate-600 hover:bg-[#e8ebee] hover:text-slate-900"
       >
         {icon}
         {label && <span>{label}</span>}
         <ChevronDown size={13} />
-        <span className="studio-tip studio-tip-bottom">{title}</span>
+        <span className={tooltipBottom}>{title}</span>
       </button>
       {open && (
         <div className="studio-popover absolute left-0 top-9 z-30 min-w-44 rounded-md border border-[#cfd4d9] bg-white p-1 shadow-[0_12px_30px_rgba(20,27,38,0.16)]">

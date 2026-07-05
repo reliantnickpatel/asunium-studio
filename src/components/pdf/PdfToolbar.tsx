@@ -50,10 +50,12 @@ const COLORS = ["#ff5a5f", "#4f7cff", "#36c98f", "#ffb347", "#a879ff", "#f2f4f7"
 const COLOR_LABELS = ["Red", "Blue", "Green", "Amber", "Purple", "White"];
 const panel =
   "rounded-lg border border-white/10 bg-[#07080b]/95 shadow-[0_26px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl";
+const tooltip =
+  "pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-[80] hidden w-max max-w-[220px] -translate-x-1/2 rounded-md border border-white/10 bg-[#07080b]/95 px-2.5 py-1.5 text-center text-[11px] font-semibold leading-snug text-white shadow-[0_18px_45px_rgba(0,0,0,0.35)] group-hover:block group-focus-visible:block";
 const toolButton =
-  "studio-tip-host relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-transparent text-[#aeb5bf] transition duration-200 hover:border-white/10 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25";
+  "group relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-transparent text-[#aeb5bf] transition duration-200 hover:border-white/10 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25";
 const compactButton =
-  "studio-tip-host relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#aeb5bf] transition duration-200 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25";
+  "group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#aeb5bf] transition duration-200 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25";
 
 export default function PdfToolbar({
   scale,
@@ -160,7 +162,7 @@ export default function PdfToolbar({
                     setPicker(null);
                   }}
                   title={`${shape.label} (${shape.key})`}
-                  className={`studio-orbit-item studio-tip-host group flex h-20 flex-col items-center justify-center gap-2 rounded-lg border text-xs transition ${
+                  className={`studio-orbit-item group relative flex h-20 flex-col items-center justify-center gap-2 rounded-lg border text-xs transition ${
                     active
                       ? "studio-tool-selected border-[#8cadff] bg-[#4f7cff] text-white"
                       : "border-white/10 bg-white/[0.045] text-[#aeb5bf] hover:border-[#4f7cff]/60 hover:bg-[#131a2a] hover:text-white"
@@ -169,7 +171,7 @@ export default function PdfToolbar({
                 >
                   <Icon size={22} className="transition group-hover:-translate-y-0.5 group-hover:scale-110" />
                   <span>{shape.label}</span>
-                  <span className="studio-tip">Draw a {shape.label.toLowerCase()} ({shape.key})</span>
+                  <span className={tooltip}>Draw a {shape.label.toLowerCase()} ({shape.key})</span>
                 </button>
               );
             })}
@@ -195,24 +197,24 @@ export default function PdfToolbar({
                   aria-label={`Use color ${swatch}`}
                   title={`${COLOR_LABELS[index]} annotation color (${index + 1})`}
                   onClick={() => chooseColor(swatch)}
-                  className={`studio-orbit-item studio-tip-host h-12 rounded-lg border-2 transition hover:-translate-y-1 hover:scale-105 ${
+                  className={`studio-orbit-item group relative h-12 rounded-lg border-2 transition hover:-translate-y-1 hover:scale-105 ${
                     color.toLowerCase() === swatch ? "studio-tool-selected border-white" : "border-white/15"
                   }`}
                   style={style}
                 >
-                  <span className="studio-tip">{COLOR_LABELS[index]} color ({index + 1})</span>
+                  <span className={tooltip}>{COLOR_LABELS[index]} color ({index + 1})</span>
                 </button>
               );
             })}
           </div>
           <div className="mt-3 grid grid-cols-[44px_1fr_44px] gap-2 border-t border-white/10 pt-3">
             <label
-              className="relative flex h-11 cursor-pointer items-center justify-center rounded-lg border border-white/15 text-white"
+              className="group relative flex h-11 cursor-pointer items-center justify-center rounded-lg border border-white/15 text-white"
               style={{ backgroundColor: customHexIsValid ? normalizedCustomHex : color }}
               title="Open system color picker"
             >
               <Pipette size={15} />
-              <span className="studio-tip">Open system color picker</span>
+              <span className={tooltip}>Open system color picker</span>
               <input
                 type="color"
                 value={customHexIsValid ? normalizedCustomHex : color}
@@ -238,10 +240,10 @@ export default function PdfToolbar({
               onClick={() => customHexIsValid && chooseColor(normalizedCustomHex.toLowerCase())}
               disabled={!customHexIsValid}
               title="Apply custom color"
-              className="studio-tip-host flex h-11 items-center justify-center rounded-lg bg-[#4f7cff] text-white transition hover:bg-[#668fff] disabled:cursor-not-allowed disabled:opacity-30"
+              className="group relative flex h-11 items-center justify-center rounded-lg bg-[#4f7cff] text-white transition hover:bg-[#668fff] disabled:cursor-not-allowed disabled:opacity-30"
             >
               <Check size={16} />
-              <span className="studio-tip">Apply custom color</span>
+              <span className={tooltip}>Apply custom color</span>
             </button>
           </div>
         </div>
@@ -264,7 +266,7 @@ export default function PdfToolbar({
                 className={`${toolButton} ${active ? "studio-tool-selected border-[#8cadff] bg-[#4f7cff] text-white" : ""}`}
               >
                 <Icon size={19} />
-                <span className="studio-tip">
+                <span className={tooltip}>
                   {item.id === "select"
                     ? "Select, move, or resize annotations"
                     : item.id === "pan"
@@ -287,7 +289,7 @@ export default function PdfToolbar({
           className={`${toolButton} ${activeShape || picker === "shapes" ? "studio-tool-selected border-[#8cadff] bg-[#4f7cff] text-white" : ""}`}
         >
           {activeShape ? <activeShape.icon size={20} /> : <Shapes size={20} />}
-          <span className="studio-tip">Choose a drawing shape</span>
+          <span className={tooltip}>Choose a drawing shape</span>
         </button>
 
         <button
@@ -304,7 +306,7 @@ export default function PdfToolbar({
         >
           <Palette size={19} />
           <span className="absolute bottom-1.5 right-1.5 h-3 w-3 rounded-full border border-white/70" style={{ backgroundColor: color }} />
-          <span className="studio-tip">Change annotation color</span>
+          <span className={tooltip}>Change annotation color</span>
         </button>
 
         <span className="mx-1 hidden h-9 w-px shrink-0 bg-white/10 md:block" />
@@ -325,17 +327,17 @@ export default function PdfToolbar({
             />
             <span className="w-4 text-center text-xs tabular-nums">{strokeSize}</span>
           </div>
-          <button onClick={cycleFont} title="Font size" className="studio-tip-host flex h-9 items-center gap-1 rounded-md px-2 text-xs text-[#aeb5bf] hover:bg-white/10 hover:text-white">
+          <button onClick={cycleFont} title="Font size" className="group relative flex h-9 items-center gap-1 rounded-md px-2 text-xs text-[#aeb5bf] hover:bg-white/10 hover:text-white">
             <Type size={14} /> {fontSize}
-            <span className="studio-tip">Cycle text size</span>
+            <span className={tooltip}>Cycle text size</span>
           </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-white/[0.045] p-1">
-          <button title="Undo" aria-label="Undo" onClick={undo} disabled={past.length === 0} className={compactButton}><Undo2 size={16} /><span className="studio-tip">Undo last annotation change</span></button>
-          <button title="Redo" aria-label="Redo" onClick={redo} disabled={future.length === 0} className={compactButton}><Redo2 size={16} /><span className="studio-tip">Redo annotation change</span></button>
-          <button title="Delete selected" aria-label="Delete selected" onClick={removeSelected} disabled={!hasSelection} className={`${compactButton} hover:bg-red-500/15 hover:text-red-300`}><Trash2 size={16} /><span className="studio-tip">Delete selected annotation</span></button>
-          <button title="Clear all annotations" aria-label="Clear all annotations" onClick={() => { if (confirm("Remove all annotations?")) clearAll(); }} className={`${compactButton} hover:bg-red-500/15 hover:text-red-300`}><Eraser size={16} /><span className="studio-tip">Remove every annotation</span></button>
+          <button title="Undo" aria-label="Undo" onClick={undo} disabled={past.length === 0} className={compactButton}><Undo2 size={16} /><span className={tooltip}>Undo last annotation change</span></button>
+          <button title="Redo" aria-label="Redo" onClick={redo} disabled={future.length === 0} className={compactButton}><Redo2 size={16} /><span className={tooltip}>Redo annotation change</span></button>
+          <button title="Delete selected" aria-label="Delete selected" onClick={removeSelected} disabled={!hasSelection} className={`${compactButton} hover:bg-red-500/15 hover:text-red-300`}><Trash2 size={16} /><span className={tooltip}>Delete selected annotation</span></button>
+          <button title="Clear all annotations" aria-label="Clear all annotations" onClick={() => { if (confirm("Remove all annotations?")) clearAll(); }} className={`${compactButton} hover:bg-red-500/15 hover:text-red-300`}><Eraser size={16} /><span className={tooltip}>Remove every annotation</span></button>
         </div>
 
         <div className="hidden min-w-[84px] shrink-0 px-2 text-right sm:block">
@@ -345,11 +347,11 @@ export default function PdfToolbar({
       </div>
 
       <div className={`studio-corner-dock pointer-events-auto absolute bottom-5 right-5 hidden h-11 items-center gap-0.5 p-1 sm:flex ${panel}`}>
-        <button title="Zoom out" aria-label="Zoom out" onClick={onZoomOut} disabled={scale <= minScale + 1e-4} className={compactButton}><ZoomOut size={17} /><span className="studio-tip">Zoom out</span></button>
+        <button title="Zoom out" aria-label="Zoom out" onClick={onZoomOut} disabled={scale <= minScale + 1e-4} className={compactButton}><ZoomOut size={17} /><span className={tooltip}>Zoom out</span></button>
         <span className="w-14 text-center text-xs tabular-nums text-[#c4cad2]">{Math.round(scale * 100)}%</span>
-        <button title="Zoom in" aria-label="Zoom in" onClick={onZoomIn} className={compactButton}><ZoomIn size={17} /><span className="studio-tip">Zoom in</span></button>
+        <button title="Zoom in" aria-label="Zoom in" onClick={onZoomIn} className={compactButton}><ZoomIn size={17} /><span className={tooltip}>Zoom in</span></button>
         <span className="mx-1 h-6 w-px bg-white/10" />
-        <button title="Fit to screen" aria-label="Fit to screen" onClick={onFit} className={compactButton}><Maximize size={17} /><span className="studio-tip">Fit full PDF to screen</span></button>
+        <button title="Fit to screen" aria-label="Fit to screen" onClick={onFit} className={compactButton}><Maximize size={17} /><span className={tooltip}>Fit full PDF to screen</span></button>
       </div>
     </div>
   );
